@@ -1,0 +1,68 @@
+#!/usr/bin/python
+
+import sys
+from subprocess import call
+import argparse
+
+def setDataVolumeName(containerName):
+    ''' Set a default data volume container name
+    '''
+    return containerName.upper() + '_DATA'
+    
+def removeContainer(containerName,f,removeVolume=False,with_volume=None,volume_name=None):
+	''' Removes the mysql client using the containerName provided
+	'''
+
+	if f:
+		f=" -f "
+	else:
+		f=''
+
+	#Should we preserve the mounted data volume or not
+	if removeVolume:
+		print("Removing mysql container {container} and any associated volumes".format(container=containerName))
+		call("docker rm "+f+" -v "+containerName, shell=True)
+		if with_volume or volume_name:
+			# Set the data volume container name variable
+			if volume_name:
+				containerVolumeName = volume_name
+			else:
+				containerVolumeName = setDataVolumeName(containerName)
+			print("Removing data volume container {container}".format(container=containerVolumeName))
+			call("docker rm "+f+" -v "+containerVolumeName, shell=True)
+	else:
+		print("Removing mysql container {container} but retaining volumes".format(container=containerName))
+		call("docker rm "+f+containerName, shell=True)
+	return
+
+def main():
+	''' Creates the parser and executes the function runContainer
+	'''
+
+	parser = argparse.ArgumentParser(
+		description="Removes mysql client on a docker container", 
+		prog="dmysql-rm")
+
+	parser.add_argument("container", help="The mysql container to remove")
+	#Should define mutual exclusivity: preserve_volume cannot appear with with-volume or volume-name
+	parser.add_argument("--preserve-volume", help="Retain the data volume associated with the container",action='store_true')
+	parser.add_argument("--with-volume", help="Declares a data volume container", action='store_true')
+	parser.add_argument("--volume-name", help="Declares a named external data volume container", action='store',type=str)
+	parser.add_argument("-f", help="Force stop", action='store_true')
+	
+	args = parser.parse_args()
+
+	#The logic is to remove volumes by default, which is counter to 'docker rm' default
+	removeVolume=True
+	if args.preserve_volume:
+		removeVolume=False
+
+	if removeVolume:
+		removeContainer(args.container,args.f,removeVolume,args.with_volume,args.volume_name)
+	else:
+		removeContainer(args.container,args.f)
+	
+	return
+
+# Execute the main function
+main()

@@ -4,6 +4,11 @@ import sys
 from subprocess import call
 import argparse
 
+def setDataVolumeName(containerName):
+    ''' Set a default data volume container name
+    '''
+    return containerName.upper() + '_DATA'
+
 def createVolume(containerVolumeName):
 	''' Create a data only container
 	'''
@@ -11,17 +16,12 @@ def createVolume(containerVolumeName):
 	call("docker run -v /var/lib/mysql --name "+ containerVolumeName+" busybox true", shell=True)
 	return
 
-def runContainer(containerName, rootPassword, hasVolume=False):
+def runContainer(containerName, rootPassword, hasVolume=False, containerVolumeName=None):
 	''' Creates the container
 	'''
 
 	if hasVolume:
-		# Create the container name variable
-		containerVolumeName = containerName.upper() + '_DATA'
-
-		# Create data container
-		createVolume(containerVolumeName)
-
+		print 'Mounting the container using the volumes-from strategy. Using container {container} as the container name'.format(container=containerVolumeName)
 		call('docker run --volumes-from ' + containerVolumeName + ' --name ' + containerName + ' -e MYSQL_ROOT_PASSWORD="' + rootPassword + '" -d mysql', shell=True)
 	else:
 		call('docker run --name ' + containerName + ' -e MYSQL_ROOT_PASSWORD="' + rootPassword + '" -d mysql', shell=True)
@@ -35,13 +35,32 @@ def main():
 
 	parser.add_argument("containerName", help="The name of the mysql container to create")
 	parser.add_argument("rootPassword", help="The root password to define when creating the container")
-	parser.add_argument("--with-volume", help="Creates a data-only container", action='store_true')
+	parser.add_argument("--volume-name", help="The name of an external data volume container", action='store',type=str)
+	volumesgroup = parser.add_mutually_exclusive_group()
+	volumesgroup.add_argument("--with-volume", help="Creates a data volume container", action='store_true')
+	volumesgroup.add_argument("--volumes-from", help="Use a previously created data volume container", action='store_true')
 
 	args = parser.parse_args()
 
-	# If there's a volume
+	# Set the data volume container name variable
+	if args.volume_name:
+		containerVolumeName = args.volume_name
+	else:
+		containerVolumeName = setDataVolumeName(args.containerName)
+
+	# If we need to create a data volume container
 	if args.with_volume:
-		runContainer(containerName=args.containerName, rootPassword=args.rootPassword, hasVolume=True)
+		# Create data volume container
+		createVolume(containerVolumeName)
+
+	hasVolume = False
+	# If there's a data volume container
+	if args.volumes_from or args.with_volume or args.volume_name is not None:
+		hasVolume = True
+	
+	#If there's a data volume container
+	if hasVolume:
+		runContainer(containerName=args.containerName, rootPassword=args.rootPassword, hasVolume=hasVolume, containerVolumeName=containerVolumeName)
 	else:
 		runContainer(containerName=args.containerName, rootPassword=args.rootPassword)
 
