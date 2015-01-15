@@ -8,6 +8,7 @@ __Note:__ The following commands will use the official MySQL docker image found 
 # Commands provided
 
 	dmysql-server (Start a new MySQL Server)
+	dmysql-server-rm (Remove a MySQL Server)
 	dmysql (Open the mysql cli)
 	dmysql-create-database (Creates a new database)
 	dmysql-import-database (Imports a database)
@@ -25,6 +26,16 @@ __Note:__ The following commands will use the official MySQL docker image found 
 
 Note that `--with-volume` and `--volumes-from` are mutually exclusive.
 
+`dmysql-server-rm CONTAINERNAME` : remove a MySQL server (ie run `docker rm -v`); the default is to remove volumes associated directly with the server container
+
+`dmysql-server-rm` options:
+
+* `-f` : force containers to stop to allow them to be deleted
+* `--preserve-volume` : retain the volume mounted directly on a server container
+* `--with-volume` : also remove an automatically named linked data volume container
+* `--volume-name` : also remove an explicitly named linked data volume container
+
+Note that `--preserve-volume` means that `--with-volume` and `--volume-name` are ignored
 
 # Install
 Clone or download this project then run:
